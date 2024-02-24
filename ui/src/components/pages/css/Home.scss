@@ -1,0 +1,69 @@
+#main {
+  .header {
+    background-image: url('../../assets/img/background.png');
+    width: 100%;
+    height: 100%;
+    background-size: cover;
+    background-position: center;
+    display: flex;
+    align-items: center;
+  }
+  .music-logo {
+    width: auto;
+    height: 100%;
+    padding: 20px;
+  }
+  .navbar-brand {
+    font-family: "Papyrus", fantasy;
+    color: #1b5074;
+    font-size: 3rem;
+    position: absolute;
+    top: 0;
+    left: 0;
+    margin: 10px;
+  }
+
+  .prompt-container {
+    width: 50%;
+    text-align: center;
+    padding:20px;
+    box-sizing: border-box;
+    position: absolute;
+    top: 45%;
+    right: 10%;
+    transform: translateY(-50%);
+  }
+
+  textarea {
+    resize: none;
+    width: 80%;
+    padding: 15px;
+    margin-top: 20px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    border: 2px solid #67584d;
+    font-size: 16px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  }
+
+  textarea:focus {
+    border-color: #67584d;
+    outline: none;
+  }
+
+  .btn {
+    padding: 12px 24px;
+    font-size: 18px;
+    font-weight: bold;
+    letter-spacing: 1px;
+    border-radius: 8px;
+    transition: background-color 0.3s, transform 0.2s;
+    color: #67584d;
+  }
+
+  .btn:hover {
+    background-color: #9d9063;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+  }
+}
