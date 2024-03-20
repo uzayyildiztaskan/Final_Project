@@ -3,3 +3,5 @@ instrument_names = ["Acoustic Grand Piano", "Bright Acoustic Piano", "Electric G
     "Distortion Guitar", "Guitar Harmonics", "Acoustic Bass", "Electric Bass (finger)", "Electric Bass (pick)", "Fretless Bass", "Slap Bass 1", "Slap Bass 2",
     "Synth Bass 1", "Synth Bass 2", "Steel Drums", "Taiko Drum", "Synth Drum"
     ]
+
+essential_instrument_names = ["Piano", "Guitar", "Bass", "Drum"]

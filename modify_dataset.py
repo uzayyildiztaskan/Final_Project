@@ -27,6 +27,20 @@ def get_bar_as_threshold(midi_data):
 
     return bar_duration
 
+def get_essential_instrument_name(instrument_name):
+
+    if "Piano" in instrument_name or "Harpsichord" in instrument_name or "Clavinet" in instrument_name:
+        return "Piano"
+    
+    if "Guitar" in instrument_name:
+        return "Guitar"
+    
+    if "Bass" in instrument_name:
+        return "Bass"
+    
+    if "Drum" in instrument_name:
+        return "Drum"
+
 def process_midi_file(midi_data, genre, sequence_length, threshold, minimum_related_note_amount):
     """
     Processes a single MIDI file to extract note sequences and labels for each instrument,
@@ -40,6 +54,9 @@ def process_midi_file(midi_data, genre, sequence_length, threshold, minimum_rela
         instrument_name = pretty_midi.program_to_instrument_name(instrument.program)
         
         if(instrument_name in instrument_list):
+            
+            essential_instrument_name = get_essential_instrument_name(instrument_name)
+
             notes = sorted(instrument.notes, key=lambda note: note.start)
             
             current_sequence = [(notes[0], True)]
@@ -55,8 +72,8 @@ def process_midi_file(midi_data, genre, sequence_length, threshold, minimum_rela
                     
                     if (len(current_sequence) == sequence_length):
 
-                        labels = find_labels_within_threshold(midi_data, instrument_name, notes, current_sequence[-1][0].start, threshold)
-                        all_sequences.append([instrument_name, genre, current_sequence, labels])
+                        labels = find_labels_within_threshold(midi_data, essential_instrument_name, notes, current_sequence[-1][0].start, threshold)
+                        all_sequences.append([essential_instrument_name, genre, current_sequence, labels])
                         current_sequence.pop(0)
 
                 elif (notes[note_index].start - notes[note_index - 1].end) > threshold:
@@ -69,8 +86,8 @@ def process_midi_file(midi_data, genre, sequence_length, threshold, minimum_rela
                     else:
                         
                         current_sequence = apply_padding(current_sequence, sequence_length)
-                        labels = find_labels_within_threshold(midi_data, instrument_name, notes, current_sequence[-1][0].start, threshold)
-                        all_sequences.append([instrument_name, genre, current_sequence, labels])
+                        labels = find_labels_within_threshold(midi_data, essential_instrument_name, notes, current_sequence[-1][0].start, threshold)
+                        all_sequences.append([essential_instrument_name, genre, current_sequence, labels])
                         current_sequence.pop(0)
 
                         note_index -= 1
@@ -96,7 +113,7 @@ def find_related_note_amount(sequence):
     return related_note_amount
 
 
-def find_labels_within_threshold(midi_data, current_sequence_instrument_name, current_sequence_instrument_notes, start_time, threshold, max_notes=3):
+def find_labels_within_threshold(midi_data, current_sequence_essential_instrument_name, current_sequence_instrument_notes, start_time, threshold, max_notes=3):
     """
     Finds the subsequent notes for each instrument within the threshold.
     Returns a list of subsequent notes for every instrument.
@@ -104,27 +121,32 @@ def find_labels_within_threshold(midi_data, current_sequence_instrument_name, cu
     """
     labels = []
 
-    labels.append((current_sequence_instrument_name, find_current_sequence_instrument_label(current_sequence_instrument_notes, start_time, threshold)))
+    labels.append((current_sequence_essential_instrument_name, find_current_sequence_instrument_label(current_sequence_instrument_notes, start_time, threshold)))
 
     for instrument in midi_data.instruments:
         
         instrument_name = pretty_midi.program_to_instrument_name(instrument.program)
 
-        if instrument_name in instrument_list and instrument_name != current_sequence_instrument_name:
-            notes = sorted(instrument.notes, key=lambda note: note.start)
+        if instrument_name in instrument_list:
+            
+            essential_instrument_name = get_essential_instrument_name(instrument_name)
 
-            is_valid = True
-            subsequent_notes = [(note, is_valid) 
-                                for note in notes 
-                                if start_time < note.start <= start_time + threshold][:max_notes]
-            
-            # Fill with dummy notes if fewer than max_notes are found
-            while len(subsequent_notes) < max_notes:
-                dummy_note = pretty_midi.Note(start = -1, end = -1, pitch = -1, velocity = -1)
-                is_valid = False
-                subsequent_notes.append((dummy_note, is_valid))
-            
-            labels.append((instrument_name, subsequent_notes))
+            if essential_instrument_name != current_sequence_essential_instrument_name:
+
+                notes = sorted(instrument.notes, key=lambda note: note.start)
+
+                is_valid = True
+                subsequent_notes = [(note, is_valid) 
+                                    for note in notes 
+                                    if start_time < note.start <= start_time + threshold][:max_notes]
+                
+                # Fill with dummy notes if fewer than max_notes are found
+                while len(subsequent_notes) < max_notes:
+                    dummy_note = pretty_midi.Note(start = -1, end = -1, pitch = -1, velocity = -1)
+                    is_valid = False
+                    subsequent_notes.append((dummy_note, is_valid))
+                
+                labels.append((essential_instrument_name, subsequent_notes))
     return labels
 
 def find_current_sequence_instrument_label(current_sequence_instrument_notes, start_time, threshold, max_notes=3):
