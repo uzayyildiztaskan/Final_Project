@@ -1,9 +1,10 @@
 import pretty_midi
 import pandas as pd
 import os
-from sources.names import instrument_names
+from sources.names import instrument_names, essential_instrument_names
 from tqdm import tqdm
 import logging
+import csv
 
 def get_bar_as_threshold(midi_data):
 
@@ -41,13 +42,11 @@ def get_essential_instrument_name(instrument_name):
     if "Drum" in instrument_name:
         return "Drum"
 
-def process_midi_file(midi_data, genre, sequence_length, threshold, minimum_related_note_amount):
+def process_midi_file(csvwriter, midi_data, genre, sequence_length, threshold, minimum_related_note_amount):
     """
     Processes a single MIDI file to extract note sequences and labels for each instrument,
     considering the threshold for temporal gaps between notes.
     """
-
-    all_sequences = []
 
     for instrument in midi_data.instruments:
 
@@ -73,7 +72,7 @@ def process_midi_file(midi_data, genre, sequence_length, threshold, minimum_rela
                     if (len(current_sequence) == sequence_length):
 
                         labels = find_labels_within_threshold(midi_data, essential_instrument_name, notes, current_sequence[-1][0].start, threshold)
-                        all_sequences.append([essential_instrument_name, genre, current_sequence, labels])
+                        csvwriter.writerow([essential_instrument_name, genre, current_sequence, labels])
                         current_sequence.pop(0)
 
                 elif (notes[note_index].start - notes[note_index - 1].end) > threshold:
@@ -87,15 +86,12 @@ def process_midi_file(midi_data, genre, sequence_length, threshold, minimum_rela
                         
                         current_sequence = apply_padding(current_sequence, sequence_length)
                         labels = find_labels_within_threshold(midi_data, essential_instrument_name, notes, current_sequence[-1][0].start, threshold)
-                        all_sequences.append([essential_instrument_name, genre, current_sequence, labels])
+                        csvwriter.writerow([essential_instrument_name, genre, current_sequence, labels])
                         current_sequence.pop(0)
 
                         note_index -= 1
 
                 note_index += 1
-
-    
-    return all_sequences
 
 def find_related_note_amount(sequence):
 
@@ -111,7 +107,6 @@ def find_related_note_amount(sequence):
         related_note_amount += 1
 
     return related_note_amount
-
 
 def find_labels_within_threshold(midi_data, current_sequence_essential_instrument_name, current_sequence_instrument_notes, start_time, threshold, max_notes=3):
     """
@@ -149,6 +144,37 @@ def find_labels_within_threshold(midi_data, current_sequence_essential_instrumen
                 labels.append((essential_instrument_name, subsequent_notes))
     return labels
 
+def sort_and_pad_labels(labels, max_notes):
+
+    sorted_labels = [None] * 4
+
+    index = 0
+
+    while index < 4:
+
+        tuple_index = -1
+
+        for tuple in labels:
+              
+            if tuple[0] == essential_instrument_names[index]:
+                tuple_index = index
+                sorted_labels[index] = tuple
+                break
+        
+        if tuple_index == -1:
+            dummy_labels = []
+            while len(dummy_labels) < max_notes:
+                    dummy_note = pretty_midi.Note(start = -1, end = -1, pitch = -1, velocity = -1)
+                    is_valid = False
+                    dummy_labels.append((dummy_note, is_valid))
+            sorted_labels.append((essential_instrument_names[index], dummy_labels))
+
+        index += 1
+
+
+
+
+
 def find_current_sequence_instrument_label(current_sequence_instrument_notes, start_time, threshold, max_notes=3):
 
     notes = sorted(current_sequence_instrument_notes, key=lambda note: note.start)
@@ -164,9 +190,7 @@ def find_current_sequence_instrument_label(current_sequence_instrument_notes, st
         labels.append((dummy_note, is_valid))
 
     return labels
-    
-
-    
+        
 def apply_padding(sequence, sequence_length):
 
     while len(sequence) < sequence_length:
@@ -178,49 +202,47 @@ def apply_padding(sequence, sequence_length):
 
     return sequence
 
+def create_csv_from_dataset(dataset_path, output_csv_path, sequence_length, max_track_amount_per_genre):
 
-def create_csv_from_dataset(dataset_path, output_csv_path, sequence_length, max_track_amoount_per_genre):
-    all_data = []
-    
-    total_track_amount = 1
-
-    for genre_folder in tqdm(os.listdir(dataset_path)):
-        genre_folder_path = os.path.join(dataset_path, genre_folder)
-
-        genre_track_amount = 1
+    with open(output_csv_path, 'w', newline='') as csvfile:
+        # Create a writer object
+        csvwriter = csv.writer(csvfile)
         
-        for midi_file_name in tqdm(os.listdir(genre_folder_path)):
-            midi_file_path = os.path.join(genre_folder_path, midi_file_name)
-
-            if(genre_track_amount > max_track_amoount_per_genre):
-                break
-
-            try:
-                midi_data = pretty_midi.PrettyMIDI(midi_file_path)
-
-            except: 
-                print(f"Error processing {midi_file_path}")
-                continue
-
-            threshold = get_bar_as_threshold(midi_data)
-            midi_data = process_midi_file(midi_data, genre_folder, sequence_length, threshold, minimum_related_note_amount = 2)
-            all_data.extend(midi_data)
-
-            genre_track_amount += 1
+        csvwriter.writerow(['Instrument', 'Genre', 'Sequences', 'Labels'])
         
-        total_track_amount += genre_track_amount
-        logging.info(f"Created {genre_folder} genre folder with {genre_track_amount} tracks in it.")
-    
-    logging.info(f"Dataset converted with a total number of {total_track_amount} tracks.")
+        total_track_amount = 1
 
-    # Convert to DataFrame
-    df = pd.DataFrame(all_data, columns=['Instrument', 'Genre', 'Sequences', 'Labels'])
-    df.to_csv(output_csv_path, index=False)
+        for genre_folder in tqdm(os.listdir(dataset_path)):
+            genre_folder_path = os.path.join(dataset_path, genre_folder)
 
+            genre_track_amount = 1
+            
+            for midi_file_name in tqdm(os.listdir(genre_folder_path)):
+                midi_file_path = os.path.join(genre_folder_path, midi_file_name)
+
+                if(genre_track_amount > max_track_amount_per_genre):
+                    break
+
+                try:
+                    midi_data = pretty_midi.PrettyMIDI(midi_file_path)
+
+                except: 
+                    print(f"Error processing {midi_file_path}")
+                    continue
+
+                threshold = get_bar_as_threshold(midi_data)
+                process_midi_file(csvwriter, midi_data, genre_folder, sequence_length, threshold, minimum_related_note_amount = 2)
+
+                genre_track_amount += 1
+            
+            total_track_amount += genre_track_amount
+            logging.info(f"Created {genre_folder} genre folder with {genre_track_amount} tracks in it.")
+        
+        logging.info(f"Dataset converted with a total number of {total_track_amount} tracks.")
 
 logging.basicConfig(filename='logs/modify_dataset.log', level=logging.INFO)
 
 instrument_list = instrument_names.copy()
 instrument_list.sort()
 
-create_csv_from_dataset(dataset_path = "fixed_genre_classified_dataset", output_csv_path = "sequences_with_labels.csv", sequence_length = 5, max_track_amoount_per_genre = 100)
+create_csv_from_dataset(dataset_path = "fixed_genre_classified_dataset", output_csv_path = "data.csv", sequence_length = 5, max_track_amount_per_genre = 100)
