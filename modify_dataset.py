@@ -5,32 +5,14 @@ from sources.names import instrument_names, essential_instrument_names
 from tqdm import tqdm
 import logging
 import csv
+import pickle
+import numpy as np
+from fractions import Fraction
 
-def get_bar_as_threshold(midi_data):
-
-    try:
-
-        time_signature = midi_data.time_signature_changes[0]
-
-    except:
-
-        time_signature = pretty_midi.TimeSignature(numerator = 4, denominator = 4, time = 0)
-
-    try:
-
-        tempo = round(midi_data.get_tempo_changes()[1][0])
-    
-    except: 
-
-        tempo = 120
-
-    bar_duration = (60 / tempo * (time_signature.denominator / 4) * time_signature.numerator)
-
-    return bar_duration
 
 def get_essential_instrument_name(instrument_name):
 
-    if "Piano" in instrument_name or "Harpsichord" in instrument_name or "Clavinet" in instrument_name:
+    if "Piano" in instrument_name:
         return "Piano"
     
     if "Guitar" in instrument_name:
@@ -41,174 +23,186 @@ def get_essential_instrument_name(instrument_name):
     
     if "Drum" in instrument_name:
         return "Drum"
-
-def process_midi_file(csvwriter, midi_data, genre, sequence_length, threshold, minimum_related_note_amount):
-    """
-    Processes a single MIDI file to extract note sequences and labels for each instrument,
-    considering the threshold for temporal gaps between notes.
-    """
-
-    for instrument in midi_data.instruments:
-
-        instrument_name = pretty_midi.program_to_instrument_name(instrument.program)
-        
-        if(instrument_name in instrument_list):
-            
-            essential_instrument_name = get_essential_instrument_name(instrument_name)
-
-            notes = sorted(instrument.notes, key=lambda note: note.start)
-            
-            current_sequence = [(notes[0], True)]
-
-            note_index = 1
-            
-            while note_index < len(notes):
-
-                if (notes[note_index].start - notes[note_index - 1].end) <= threshold:
-                    
-                    is_valid = True     # True if note is valid, false if note is a dummy note
-                    current_sequence.append((notes[note_index], is_valid))
-                    
-                    if (len(current_sequence) == sequence_length):
-
-                        labels = find_labels_within_threshold(midi_data, essential_instrument_name, notes, current_sequence[-1][0].start, threshold)
-                        csvwriter.writerow([essential_instrument_name, genre, current_sequence, labels])
-                        current_sequence.pop(0)
-
-                elif (notes[note_index].start - notes[note_index - 1].end) > threshold:
-                    
-                    if (find_related_note_amount(current_sequence) < minimum_related_note_amount): # Reset sequence
-
-                        is_valid = True
-                        current_sequence = [(notes[note_index], is_valid)]
-                    
-                    else:
-                        
-                        current_sequence = apply_padding(current_sequence, sequence_length)
-                        labels = find_labels_within_threshold(midi_data, essential_instrument_name, notes, current_sequence[-1][0].start, threshold)
-                        csvwriter.writerow([essential_instrument_name, genre, current_sequence, labels])
-                        current_sequence.pop(0)
-
-                        note_index -= 1
-
-                note_index += 1
-
-def find_related_note_amount(sequence):
-
-    related_note_amount = 0
-
-    for tuple in sequence:
-        
-        is_valid = tuple[1]
-
-        if not is_valid:
-            break
-        
-        related_note_amount += 1
-
-    return related_note_amount
-
-def find_labels_within_threshold(midi_data, current_sequence_essential_instrument_name, current_sequence_instrument_notes, start_time, threshold, max_notes=3):
-    """
-    Finds the subsequent notes for each instrument within the threshold.
-    Returns a list of subsequent notes for every instrument.
-    If there are no subsequent notes within the threshold for a specific instrument, uses dummy notes.
-    """
-    labels = []
-
-    labels.append((current_sequence_essential_instrument_name, find_current_sequence_instrument_label(current_sequence_instrument_notes, start_time, threshold)))
-
-    for instrument in midi_data.instruments:
-        
-        instrument_name = pretty_midi.program_to_instrument_name(instrument.program)
-
-        if instrument_name in instrument_list:
-            
-            essential_instrument_name = get_essential_instrument_name(instrument_name)
-
-            if essential_instrument_name != current_sequence_essential_instrument_name:
-
-                notes = sorted(instrument.notes, key=lambda note: note.start)
-
-                is_valid = True
-                subsequent_notes = [(note, is_valid) 
-                                    for note in notes 
-                                    if start_time < note.start <= start_time + threshold][:max_notes]
-                
-                # Fill with dummy notes if fewer than max_notes are found
-                while len(subsequent_notes) < max_notes:
-                    dummy_note = pretty_midi.Note(start = -1, end = -1, pitch = -1, velocity = -1)
-                    is_valid = False
-                    subsequent_notes.append((dummy_note, is_valid))
-                
-                labels.append((essential_instrument_name, subsequent_notes))
-    return labels
-
-def sort_and_pad_labels(labels, max_notes):
-
-    sorted_labels = [None] * 4
-
-    index = 0
-
-    while index < 4:
-
-        tuple_index = -1
-
-        for tuple in labels:
-              
-            if tuple[0] == essential_instrument_names[index]:
-                tuple_index = index
-                sorted_labels[index] = tuple
-                break
-        
-        if tuple_index == -1:
-            dummy_labels = []
-            while len(dummy_labels) < max_notes:
-                    dummy_note = pretty_midi.Note(start = -1, end = -1, pitch = -1, velocity = -1)
-                    is_valid = False
-                    dummy_labels.append((dummy_note, is_valid))
-            sorted_labels.append((essential_instrument_names[index], dummy_labels))
-
-        index += 1
-
-
-
-
-
-def find_current_sequence_instrument_label(current_sequence_instrument_notes, start_time, threshold, max_notes=3):
-
-    notes = sorted(current_sequence_instrument_notes, key=lambda note: note.start)
-    is_valid = True
-    labels = [(note, is_valid) 
-                        for note in notes 
-                        if start_time < note.start <= start_time + threshold][:max_notes]
     
-    # Fill with dummy notes if fewer than max_notes are found
-    while len(labels) < max_notes:
-        dummy_note = pretty_midi.Note(start = -1, end = -1, pitch = -1, velocity = -1)
-        is_valid = False
-        labels.append((dummy_note, is_valid))
+def find_closest_fraction(target_fraction, max_digits=1):
 
-    return labels
+    closest_fraction = None
+    smallest_difference = float('inf')
+
+    for numerator in range(1, 10**max_digits):
+        for denominator in range(1, 10**max_digits):
+            current_fraction = Fraction(numerator, denominator)
+            current_difference = abs(current_fraction - target_fraction)
+
+            if current_difference < smallest_difference:
+                smallest_difference = current_difference
+                closest_fraction = current_fraction
+
+    return closest_fraction
+
+def process_midi_file(csvwriter, midi_data, genre, threshold, sequence_length, max_chord_notes = 4):
+
+    instrument_sequence_list = []
+
+    tempo = round(midi_data.get_tempo_changes()[1][0])
+
+    if tempo not in tempos:
+        tempos.append(tempo)
+
+    for instrument in midi_data.instruments:
+
+        instrument_name = pretty_midi.program_to_instrument_name(instrument.program)
+
+        if instrument_name in instrument_names.values():
+
+            essential_instrument_name = get_essential_instrument_name(instrument_name)
+
+            if len(instrument_sequence_list) == 0 or essential_instrument_name not in instrument_sequence_list:
+
+                instrument_sequence_list.append(essential_instrument_name)
+                
+                current_sequence = []
+
+                chord = []
+
+                chord_end_times = []
+                chord_start_times = []
+
+                for note in instrument.notes:
+
+                    quarter_duration = (tempo / 120) * (note.end - note.start)
+
+                    fraction = Fraction(quarter_duration).limit_denominator()
+
+                    fraction = find_closest_fraction(fraction)
+
+                    duration = f"{fraction.numerator}/{fraction.denominator}"
+
+                    if len(chord) == 0 or (note.start - chord_end_times[-1] <= threshold and len(chord) < max_chord_notes):
+
+                        chord.append((duration, note.pitch, note.velocity))
+                        chord_start_times.append(note.start)
+                        chord_end_times.append(note.end)
+
+                    else:
+
+                        chord_pitch = ','.join(str(chord_note[1]) for chord_note in chord)
+
+                        if chord_pitch not in pitches:
+                            pitches.append(chord_pitch)
+
+                        if duration not in durations:
+                            durations.append(duration)
+                        
+                        current_sequence.append((chord[0][0], chord_pitch, chord[0][2]))
+
+                        chord = [(duration, note.pitch, note.velocity)]
+                        chord_start_times = [note.start]
+                        chord_end_times = [note.end]
+
+                    if len(current_sequence) == sequence_length:
+
+                        labels = find_labels(midi_data, chord_start_times[-1], chord_end_times[-1], tempo, threshold, max_chord_notes)
+
+                        if len(labels) != 0:
+
+                            csvwriter.writerow([essential_instrument_name, genre, tempo, current_sequence, labels])
+
+                            current_sequence.pop(0)                            
+            
+def find_labels(midi_data, start_time, end_time, tempo, threshold, max_chord_notes):
+
+    labels = []
+    found_labels = []
+
+    for instrument in midi_data.instruments:
+
+        instrument_name = pretty_midi.program_to_instrument_name(instrument.program)
+
+        if instrument_name in instrument_names.values():
+
+            essential_instrument_name = get_essential_instrument_name(instrument_name)
+
+            chord = []
+
+            chord_end_times = []
+
+            for note in instrument.notes:
+                    
+                    if note.start >= start_time:
+
+                        if note.start - end_time > 1:
+
+                            quarter_duration = (tempo / 120) * (note.start - end_time)
+
+                            fraction = Fraction(quarter_duration).limit_denominator()
+
+                            fraction = find_closest_fraction(fraction)
+
+                            duration = f"{fraction.numerator}/{fraction.denominator}"
+
+                            labels.append([essential_instrument_name, (duration, "-1", 60)])
+
+                            found_labels.append(essential_instrument_name)
+
+                            if duration not in durations:
+                                durations.append(duration)
+
+                            break
+
+                        quarter_duration = (tempo / 120) * (note.end - note.start)
+
+                        fraction = Fraction(quarter_duration).limit_denominator()
+
+                        fraction = find_closest_fraction(fraction)
+
+                        duration = f"{fraction.numerator}/{fraction.denominator}"
+
+                        if len(chord) == 0 or (note.start - chord_end_times[-1] <= threshold and len(chord) < max_chord_notes):
+
+                            chord.append((duration, note.pitch, note.velocity))
+                            chord_end_times.append(note.end)
+
+                        else:
+
+                            chord_pitch = ','.join(str(chord_note[1]) for chord_note in chord)
+
+                            if chord_pitch not in pitches:
+                                pitches.append(chord_pitch)
+                            
+                            if duration not in durations:
+                                durations.append(duration)
+                            
+                            labels.append([essential_instrument_name, (chord[0][0], chord_pitch, chord[0][2])])
+
+                            found_labels.append(essential_instrument_name)
+
+                            break
+
+    if len(found_labels) == 0:
+        return []
+
+    labels_in_order = []
+
+    for ein in essential_instrument_names:
         
-def apply_padding(sequence, sequence_length):
+        if ein in found_labels:
+            
+            labels_in_order.append(labels[found_labels.index(ein)])
 
-    while len(sequence) < sequence_length:
+        else:
 
-        dummy_note = pretty_midi.Note(start = -1, end = -1, pitch = -1, velocity = -1)
-        is_valid = False
+            labels_in_order.append([ein, (-2, -2, -2)])
 
-        sequence.append((dummy_note, is_valid))
+    return labels_in_order
 
-    return sequence
-
-def create_csv_from_dataset(dataset_path, output_csv_path, sequence_length, max_track_amount_per_genre):
+def create_csv_from_dataset(dataset_path, output_csv_path, sequence_length, max_track_amount_per_genre, threshold):
 
     with open(output_csv_path, 'w', newline='') as csvfile:
         # Create a writer object
         csvwriter = csv.writer(csvfile)
         
-        csvwriter.writerow(['Instrument', 'Genre', 'Sequences', 'Labels'])
+        csvwriter.writerow(['Instrument', 'Genre', 'Tempo', 'Sequence', 'Labels'])
         
         total_track_amount = 1
 
@@ -230,8 +224,7 @@ def create_csv_from_dataset(dataset_path, output_csv_path, sequence_length, max_
                     print(f"Error processing {midi_file_path}")
                     continue
 
-                threshold = get_bar_as_threshold(midi_data)
-                process_midi_file(csvwriter, midi_data, genre_folder, sequence_length, threshold, minimum_related_note_amount = 2)
+                process_midi_file(csvwriter, midi_data, genre_folder, threshold, sequence_length)
 
                 genre_track_amount += 1
             
@@ -239,10 +232,31 @@ def create_csv_from_dataset(dataset_path, output_csv_path, sequence_length, max_
             logging.info(f"Created {genre_folder} genre folder with {genre_track_amount} tracks in it.")
         
         logging.info(f"Dataset converted with a total number of {total_track_amount} tracks.")
+        
 
 logging.basicConfig(filename='logs/modify_dataset.log', level=logging.INFO)
 
-instrument_list = instrument_names.copy()
-instrument_list.sort()
 
-create_csv_from_dataset(dataset_path = "fixed_genre_classified_dataset", output_csv_path = "data.csv", sequence_length = 5, max_track_amount_per_genre = 100)
+
+pitches = []
+durations = []
+tempos = []
+
+pitches.append("-1")
+
+create_csv_from_dataset(dataset_path = "./genre_classified_dataset", output_csv_path = "data_test.csv", sequence_length = 10, max_track_amount_per_genre = 10, threshold = 0)
+
+pitches_dict = {pitch: i for i, pitch in enumerate(sorted(pitches))}
+
+durations_dict = {duration: i for i, duration in enumerate(sorted(durations))}
+
+tempos_dict = {tempo: i for i, tempo in enumerate(sorted(tempos))}
+
+with open('./enumarators/pitch_enumarator.pickle', 'wb') as handle:
+    pickle.dump(pitches_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+with open('./enumarators/duration_enumarator.pickle', 'wb') as handle:
+    pickle.dump(durations_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
+
+with open('./enumarators/tempo_enumarator.pickle', 'wb') as handle:
+    pickle.dump(tempos_dict, handle, protocol=pickle.HIGHEST_PROTOCOL)
