@@ -1,0 +1,11 @@
+{
+  "main": "main.js",
+  "devDependencies": {
+    "electron": "^29.2.0"
+  },
+  "scripts": {
+    "start": "react-scripts start",
+    "build": "react-scripts build",
+    "electron-start": "electron ."
+  }
+}

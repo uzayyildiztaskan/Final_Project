@@ -1,0 +1,16 @@
+.loading {
+    width: 50%;
+    text-align: center;
+    padding: 20px;
+    box-sizing: border-box;
+
+    transform: translateY(-50%);
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+
+.loading h1 {
+    margin-bottom: 20px;
+}

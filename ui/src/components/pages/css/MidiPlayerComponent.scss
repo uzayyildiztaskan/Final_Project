@@ -1,0 +1,35 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  background-color: #fff;
+  background-image: url('../../assets/img/background.png');
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  font-family: 'Arial', sans-serif;
+  color: #1b5074;
+}
+
+.midi-container {
+  width: 50%;
+  text-align: center;
+  padding:20px;
+  box-sizing: border-box;
+  position: absolute;
+  top: 45%;
+  right: 10%;
+  transform: translateY(-50%);
+
+}
+.midi-player {
+  margin-left: auto;
+  margin-right: auto;
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  background-color: #9d9063;
+  padding: 20px;
+  width: 300px;  
+}
