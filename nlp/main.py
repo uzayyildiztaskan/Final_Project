@@ -20,7 +20,7 @@ def analyze_instrument_request(sentence):
         raise Exception("Could not find a suitable Gemini model")
 
     response = genai.generate_text(
-        prompt = f"return a list of only the desired instrument names from this sentence: '{sentence}' ",
+        prompt = f"return a list of only the desired instrument names and music genre from this sentence and last desired the music genre: '{sentence}' ",
     )
 
     item_list = response.result.split(',')
@@ -32,7 +32,9 @@ def analyze_instrument_request(sentence):
 def ai_function():
     data = request.json
     result = analyze_instrument_request(data)
-    return jsonify({"result": result})
+    genre = result[len(result)-1]
+    result.pop()
+    return jsonify({"result": result}, {"genre": genre})
 
 if __name__ == '__main__':
     app.run(debug=True)
