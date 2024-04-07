@@ -10,3 +10,7 @@ test_dataset/
 sources/random_sequences.py
 outputs/
 models/
+inference_BACKUP_1045.py
+inference_BASE_1045.py
+inference_LOCAL_1045.py
+inference_REMOTE_1045.py
