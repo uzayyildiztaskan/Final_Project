@@ -1,14 +1,18 @@
 import React, { useState } from "react";
 import './css/Home.scss';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 function Homepage() {
     const [userInput, setUserInput] = useState('');
+    let navigate = useNavigate();
 
     const handleSubmit = async () => {
         try {
+            navigate('/midi');
             const response = await axios.post('http://localhost:5000/api/ai-function', { text: userInput });
             console.log(response.data); 
+        
         } catch (error) {
             console.error('Error:', error);
         }
@@ -27,7 +31,7 @@ function Homepage() {
                   value={userInput}
                   onChange={e => setUserInput(e.target.value)}
                 />
-                <button onClick={handleSubmit} className="btn" style={{ textDecoration: "none" }}>
+                <button onClick={handleSubmit} className="btn" style={{ textDecoration: "none", color:"#003c4c" }}>
                     Compose Now
                 </button>
             </div>
