@@ -214,7 +214,7 @@ for name in essential_instrument_names:
 
         csvwriter.writerow(['Genre', 'Sequence', 'Label'])
 
-create_csv_from_dataset(dataset_path = "./test_dataset", sequence_length = 10, max_track_amount_per_genre = 10, threshold = 0)
+create_csv_from_dataset(dataset_path = "./dataset", sequence_length = 10, max_track_amount_per_genre = 10, threshold = 0)
 
 pitches_dict = {pitch: i for i, pitch in enumerate(sorted(pitches))}
 

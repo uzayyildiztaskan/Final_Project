@@ -4,13 +4,13 @@ import './css/MidiPlayerComponent.scss';
 import Loading from "./Loading";
 
 const MidiPlayerComponent = () => {
-    
+
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     setTimeout(() => {
       setIsLoading(false);
-    }, 3000);
+    }, 10000);
   }, []);
 
   return (
@@ -35,5 +35,5 @@ const MidiPlayerComponent = () => {
       </div>
   );
 };
-  
+
   export default MidiPlayerComponent;

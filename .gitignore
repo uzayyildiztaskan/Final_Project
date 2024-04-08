@@ -31,3 +31,4 @@ npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 >>>>>>> origin/ui
+ui/node_modules/

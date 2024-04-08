@@ -71,7 +71,7 @@ def pad_values(X_values, y_values, largest_dimension):
 
             else:
 
-                padding_values = np.full((largest_dimension - x.shape[0], 14), -2)                
+                padding_values = np.full((largest_dimension - x.shape[0], len(genres)), -2)                
 
             x = np.append(x, padding_values, axis=0)
 
@@ -183,27 +183,27 @@ masking_layer_genre_guitar = Masking(mask_value=-2)(input_genre_guitar)
 masking_layer_genre_piano = Masking(mask_value=-2)(input_genre_piano)
 
 lstm_layer_1_bass = LSTM(128, return_sequences=True)(masking_layer_bass)
-dropout_1_bass = Dropout(0.2)(lstm_layer_1_bass)
+dropout_1_bass = Dropout(0.1)(lstm_layer_1_bass)
 lstm_layer_2_bass = LSTM(64, return_sequences=True)(dropout_1_bass)
-dropout_2_bass = Dropout(0.4)(lstm_layer_2_bass)
+dropout_2_bass = Dropout(0.1)(lstm_layer_2_bass)
 lstm_layer_3_bass = LSTM(32, return_sequences=False)(dropout_2_bass)
 
 lstm_layer_1_drum = LSTM(128, return_sequences=True)(masking_layer_drum)
-dropout_1_drum = Dropout(0.2)(lstm_layer_1_drum)
+dropout_1_drum = Dropout(0.1)(lstm_layer_1_drum)
 lstm_layer_2_drum = LSTM(64, return_sequences=True)(dropout_1_drum)
-dropout_2_drum = Dropout(0.4)(lstm_layer_2_drum)
+dropout_2_drum = Dropout(0.1)(lstm_layer_2_drum)
 lstm_layer_3_drum = LSTM(32, return_sequences=False)(dropout_2_drum)
 
 lstm_layer_1_guitar = LSTM(128, return_sequences=True)(masking_layer_guitar)
-dropout_1_guitar = Dropout(0.2)(lstm_layer_1_guitar)
+dropout_1_guitar = Dropout(0.1)(lstm_layer_1_guitar)
 lstm_layer_2_guitar = LSTM(64, return_sequences=True)(dropout_1_guitar)
-dropout_2_guitar = Dropout(0.4)(lstm_layer_2_guitar)
+dropout_2_guitar = Dropout(0.1)(lstm_layer_2_guitar)
 lstm_layer_3_guitar = LSTM(32, return_sequences=False)(dropout_2_guitar)
 
 lstm_layer_1_piano = LSTM(128, return_sequences=True)(masking_layer_piano)
-dropout_1_piano = Dropout(0.2)(lstm_layer_1_piano)
+dropout_1_piano = Dropout(0.1)(lstm_layer_1_piano)
 lstm_layer_2_piano = LSTM(64, return_sequences=True)(dropout_1_piano)
-dropout_2_piano = Dropout(0.4)(lstm_layer_2_piano)
+dropout_2_piano = Dropout(0.1)(lstm_layer_2_piano)
 lstm_layer_3_piano = LSTM(32, return_sequences=False)(dropout_2_piano)
 
 
