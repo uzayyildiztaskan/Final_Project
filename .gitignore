@@ -8,7 +8,6 @@ outputs/generated_music_4.mid
 models/classification/genre_classifier.joblib
 enumarators/
 test_dataset/
-sources/random_sequences.py
 outputs/
 models/
 inference_BACKUP_1045.py
