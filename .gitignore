@@ -1,15 +1,8 @@
 <<<<<<< HEAD
-raw_data/
-genre_classified_dataset/
-fixed_genre_classified_dataset/
 data_classification/
-sequences_with_labels.csv
 outputs/generated_music_4.mid
-models/classification/genre_classifier.joblib
-enumarators/
 test_dataset/
 outputs/
-models/
 inference_BACKUP_1045.py
 inference_BASE_1045.py
 inference_LOCAL_1045.py
